@@ -2,10 +2,10 @@ import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 import { ConsumedCreditsQuery, CreditsBalanceQuery, StyleGuideQuery } from "@/convex/query.config";
 import { prompts } from "@/prompts";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 
-export async function POST(request: NextResponse) {
+export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
         const { userMessage, generatedUUid, currentHTML, projectId } = body
@@ -29,20 +29,20 @@ export async function POST(request: NextResponse) {
             )
         }
 
-        const {ok}=await ConsumedCreditsQuery({amount:4})
+        const { ok } = await ConsumedCreditsQuery({ amount: 4 })
 
-        if(!ok){
+        if (!ok) {
             return NextResponse.json(
-                {error:'Failed to consume credits'},
-                {status:500}
+                { error: 'Failed to consume credits' },
+                { status: 500 }
             )
         }
-        console.log(currentHTML,'currentHTML')
+        console.log(currentHTML, 'currentHTML')
 
-        const styledGuide=await StyleGuideQuery(projectId)
-        const styleGuideData=styledGuide.styleGuide._valueJSON as unknown as{
-            colorSections:unknown[]
-            typographySections:unknown[]
+        const styledGuide = await StyleGuideQuery(projectId)
+        const styleGuideData = styledGuide.styleGuide._valueJSON as unknown as {
+            colorSections: unknown[]
+            typographySections: unknown[]
         }
 
         let userPrompt = `CRITICAL: You are redesigning a SPECIFIC WORKFLOW PAGE, not creating a new page from scratch.
@@ -76,53 +76,53 @@ IMPORTANT:
 - DO apply the user's changes to that specific page
 
     colors: ${styleGuideData.colorSections
-      .map((color: any) =>
-        color.swatches
-          .map((swatch: any) => {
-            return `${swatch.name}: ${swatch.hexColor}, ${swatch.description}`;
-          })
-          .join(", ")
-      )
-      .join(", ")}
+                .map((color: any) =>
+                    color.swatches
+                        .map((swatch: any) => {
+                            return `${swatch.name}: ${swatch.hexColor}, ${swatch.description}`;
+                        })
+                        .join(", ")
+                )
+                .join(", ")}
     typography: ${styleGuideData.typographySections
-      .map((typography: any) =>
-        typography.styles
-          .map((style: any) => {
-            return `${style.name}: ${style.description}, ${style.fontFamily}, ${style.fontWeight}, ${style.fontSize}, ${style.lineHeight}`;
-          })
-          .join(", ")
-      )
-      .join(", ")}
+                .map((typography: any) =>
+                    typography.styles
+                        .map((style: any) => {
+                            return `${style.name}: ${style.description}, ${style.fontFamily}, ${style.fontWeight}, ${style.fontSize}, ${style.lineHeight}`;
+                        })
+                        .join(", ")
+                )
+                .join(", ")}
 
 Please generate the modified version of the provided workflow page HTML with the requested changes applied.`;
-   
-
-    userPrompt += `\n\nPlease generate a professional redesigned workflow page that incorporates the requested changes while maintaining the core functionality and design consistency.`;
 
 
-      const result = streamText({
-                 model: google('models/gemini-2.5-flash'),
-                 messages: [
-                     {
-     
-                         role: 'user',
-                         content: [
-     
-                             {
-                                 type: 'text',
-                                 text: userPrompt,
-                             },
-     
-                          
-                         ],
-                     }
-                 ],
-                 system: prompts.generativeUi.system,
-                 temperature: 0.7,
-             })
+        userPrompt += `\n\nPlease generate a professional redesigned workflow page that incorporates the requested changes while maintaining the core functionality and design consistency.`;
 
 
-    
+        const result = streamText({
+            model: google('models/gemini-2.5-flash'),
+            messages: [
+                {
+
+                    role: 'user',
+                    content: [
+
+                        {
+                            type: 'text',
+                            text: userPrompt,
+                        },
+
+
+                    ],
+                }
+            ],
+            system: prompts.generativeUi.system,
+            temperature: 0.7,
+        })
+
+
+
         const stream = new ReadableStream({
             async start(controller) {
                 try {
@@ -150,9 +150,11 @@ Please generate the modified version of the provided workflow page HTML with the
 
     } catch (error) {
         console.error('Error in workflow redesign:', error)
-        return NextResponse.json({ error: 'Internal Server Error',
-             details: error instanceof Error ? error.message : 'Unknown error' }
-             , { status: 500 })
+        return NextResponse.json({
+            error: 'Internal Server Error',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }
+            , { status: 500 })
 
     }
 
