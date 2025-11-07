@@ -1,0 +1,5 @@
+pnpm run dev
+
+ngrok http 3000
+
+pnpm dlx inngest-cli@latest dev
